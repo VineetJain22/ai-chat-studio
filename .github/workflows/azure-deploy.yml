@@ -1,9 +1,10 @@
 name: Build and deploy to Azure Web App
 
+# Manual-only: this is a reference CI/CD pipeline from the original internal
+# tool, kept here to show the deploy packaging approach. It isn't wired to a
+# real Azure target in this repo (no KUDU_* secrets configured), so it's
+# intentionally not triggered on push.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
