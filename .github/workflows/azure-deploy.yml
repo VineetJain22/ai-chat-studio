@@ -1,0 +1,51 @@
+name: Build and deploy to Azure Web App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package for deployment
+        run: |
+          cp -r public .next/standalone/public
+          cp -r .next/static .next/standalone/.next/static
+          # Install packages used via child_process with full dependency trees
+          # (Next.js standalone only bundles directly imported packages)
+          cd .next/standalone
+          npm init -y
+          npm install --no-save pptxgenjs pdf-parse@1 mammoth
+          cd ../..
+          cd .next/standalone
+          zip -r ../../deploy.zip .
+
+      - name: Deploy via Kudu ZIP deploy
+        env:
+          KUDU_USER: ${{ secrets.KUDU_USERNAME }}
+          KUDU_PASS: ${{ secrets.KUDU_PASSWORD }}
+          KUDU_HOST: ${{ secrets.KUDU_HOST }}  # e.g. your-app-name.scm.westeurope-01.azurewebsites.net
+        run: |
+          curl -X POST \
+            -u "${KUDU_USER}:${KUDU_PASS}" \
+            --data-binary @deploy.zip \
+            "https://${KUDU_HOST}/api/zipdeploy" \
+            -w "\nHTTP status: %{http_code}\n"

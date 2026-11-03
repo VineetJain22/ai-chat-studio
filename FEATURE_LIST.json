@@ -1,0 +1,69 @@
+{
+  "_readme": "Structured log of what's built and what's backlog, each with the trade-off behind it. Written in the same style used to scope work for a coding agent in slices — see CLAUDE.md for the conventions this follows.",
+  "shipped": [
+    {
+      "id": "multi-provider-chat",
+      "summary": "Chat with GPT-5.4 Mini, GPT-5.3 Codex, Claude Sonnet 4.6, and DeepSeek V3.2 through one streaming UI.",
+      "rationale": "Each provider has a different request/response shape (Chat Completions, Responses API, Anthropic Messages). A declarative model registry (src/lib/models.ts) isolates that difference so the UI and the chat route stay provider-agnostic.",
+      "tradeoff": "No provider-specific features (prompt caching, extended thinking, parallel tool calls) exposed yet — lowest-common-denominator streaming contract.",
+      "files": ["src/lib/models.ts", "src/app/api/chat/route.ts"]
+    },
+    {
+      "id": "document-pinning",
+      "summary": "Attach a PDF/Word file to chat; its content stays in context across a long conversation.",
+      "rationale": "History is trimmed by message count to control token cost, but a naively trimmed document reference silently disappears mid-conversation.",
+      "tradeoff": "Pinning + trimming must filter the original array in place to preserve user/assistant alternation — concatenating pinned + recent breaks it and the Anthropic API rejects the result.",
+      "files": ["src/app/api/chat/route.ts", "src/app/api/upload/route.ts"]
+    },
+    {
+      "id": "llm-generated-pptx",
+      "summary": "Turn the conversation into a branded .pptx deck.",
+      "rationale": "The model writes a pptxgenjs script directly rather than filling a fixed template, so slide structure can vary with the conversation, not just the text in fixed boxes.",
+      "tradeoff": "Code-gen is less reliable than structured output into a template. Mitigated with a syntax check, a truncate-to-last-good-line recovery pass, one automatic retry, and execFile (no shell) for execution safety.",
+      "files": ["src/app/api/generate-ppt/route.ts", "src/lib/pptx-utils.ts"]
+    },
+    {
+      "id": "client-side-quota",
+      "summary": "Dollar-based monthly spend tracker per model, shown in the sidebar.",
+      "rationale": "Zero backend state needed for an MVP on a small, trusted shared budget.",
+      "tradeoff": "Explicitly a usage nudge, not a spend cap — resettable via browser storage. A real ceiling needs server-side enforcement; see backlog.",
+      "files": ["src/lib/quota.ts", "src/components/QuotaIndicator.tsx"]
+    },
+    {
+      "id": "entra-id-sso",
+      "summary": "Azure Entra ID sign-in via App Service Easy Auth.",
+      "rationale": "Easy Auth injects a trusted principal header after OIDC sign-in — no session/token-handling code of our own to get wrong.",
+      "tradeoff": "Platform lock-in to Azure App Service. Bypassed outside production (Easy Auth's endpoints don't exist under `next dev`) so the repo runs and is reviewable without a live Azure tenant.",
+      "files": ["src/middleware.ts", "src/app/login/page.tsx"]
+    },
+    {
+      "id": "portfolio-extraction",
+      "summary": "This repo itself: a focused, anonymized, chat-only extract of a larger internal tool (which also has a RAG knowledge-search pipeline and a multi-step proposal-document generator).",
+      "rationale": "A clean rewrite of the UI layer (rather than stripping the original down) kept the extracted app small and fully legible, instead of carrying dead state through from the multi-tab original.",
+      "tradeoff": "Rewrite cost more upfront than deletion would have, in exchange for a result with no leftover surface area from the removed features.",
+      "files": ["src/app/page.tsx"]
+    }
+  ],
+  "backlog": [
+    {
+      "id": "server-side-quota-enforcement",
+      "summary": "A real budget ceiling behind the current client-side nudge.",
+      "rationale": "Needed the moment this has to hold against a user trying to get around it, not just a shared-budget nudge for trusted users."
+    },
+    {
+      "id": "provider-specific-features",
+      "summary": "Expose prompt caching and extended thinking for Claude, parallel tool calls for GPT, instead of the current lowest-common-denominator streaming contract.",
+      "rationale": "Current routing abstraction trades these away for a uniform UI contract; worth revisiting for an agentic (not just chat) use case."
+    },
+    {
+      "id": "pptx-runtime-error-recovery",
+      "summary": "Catch and repair runtime failures in generated pptxgenjs scripts, not just syntax errors.",
+      "rationale": "`node --check` only catches syntax errors — a correctly-formed call to the wrong pptxgenjs method still throws mid-render today."
+    },
+    {
+      "id": "usage-analytics",
+      "summary": "Anonymized per-model request counts.",
+      "rationale": "Client-side-only quota can't answer 'which model do people actually reach for' — the obvious next question once this is in real use."
+    }
+  ]
+}

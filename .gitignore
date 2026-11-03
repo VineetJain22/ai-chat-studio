@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Environment variables — NEVER commit this
+.env.local
+.env*.local
+
+# System files
+.DS_Store
+
+# Local-only notes — process/collaboration docs, not project artifacts
+*.local.md
+
+# Deployment package
+deploy.zip
+
+# Logs
+*.log
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo
